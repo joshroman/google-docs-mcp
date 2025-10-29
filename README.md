@@ -12,23 +12,28 @@ This comprehensive server uses the Model Context Protocol (MCP) and the `fastmcp
 **Features:**
 
 ### Document Access & Editing
+
 - **Read Documents:** Read content with `readGoogleDoc` (plain text, JSON structure, or markdown)
 - **Append to Documents:** Add text to documents with `appendToGoogleDoc`
 - **Insert Text:** Place text at specific positions with `insertText`
 - **Delete Content:** Remove content from a document with `deleteRange`
+- **Tab Support:** Work with multi-tab documents using `listDocumentTabs` and optional `tabId` parameter in read/write operations
 
 ### Formatting & Styling
+
 - **Text Formatting:** Apply rich styling with `applyTextStyle` (bold, italic, colors, etc.)
 - **Paragraph Formatting:** Control paragraph layout with `applyParagraphStyle` (alignment, spacing, etc.)
 - **Find & Format:** Format by text content using `formatMatchingText` (legacy support)
 
 ### Document Structure
+
 - **Tables:** Create tables with `insertTable`
 - **Page Breaks:** Insert page breaks with `insertPageBreak`
 - **Images:** Insert images from URLs with `insertImageFromUrl`, or upload local images with `insertLocalImage`
 - **Experimental Features:** Tools like `fixListFormatting` for automatic list detection
 
 ### 🆕 Comment Management
+
 - **List Comments:** View all comments in a document with `listComments` (shows author, date, and quoted text)
 - **Get Comment Details:** Get specific comment with replies using `getComment`
 - **Add Comments:** Create new comments anchored to text with `addComment`
@@ -37,6 +42,7 @@ This comprehensive server uses the Model Context Protocol (MCP) and the `fastmcp
 - **Delete Comments:** Remove comments from documents with `deleteComment`
 
 ### 🆕 Google Drive File Management
+
 - **Document Discovery:** Find and list documents with `listGoogleDocs`, `searchGoogleDocs`, `getRecentGoogleDocs`
 - **Document Information:** Get detailed metadata with `getDocumentInfo`
 - **Folder Management:** Create folders (`createFolder`), list contents (`listFolderContents`), get info (`getFolderInfo`)
@@ -44,6 +50,7 @@ This comprehensive server uses the Model Context Protocol (MCP) and the `fastmcp
 - **Document Creation:** Create new docs (`createDocument`) or from templates (`createFromTemplate`)
 
 ### Integration
+
 - **Google Authentication:** Secure OAuth 2.0 authentication with full Drive access
 - **MCP Compliant:** Designed for use with Claude and other MCP clients
 - **VS Code Integration:** [Setup guide](vscode.md) for VS Code MCP extension
@@ -212,7 +219,37 @@ Once configured, you should be able to use the tools in your chats with Claude:
 - "Can you get the content of Google Doc `YOUR_GOOGLE_DOC_ID`?"
 - "Append 'This was added by Claude!' to document `YOUR_GOOGLE_DOC_ID` using the `google-docs-mcp` tool."
 
+### Working with Tabs
+
+Google Docs now supports multi-tab documents. This MCP server provides full support for working with tabs:
+
+**Listing Tabs:**
+
+- "List all tabs in document `YOUR_GOOGLE_DOC_ID` using the `listDocumentTabs` tool."
+- "Show me the tab structure with content summary for document `YOUR_GOOGLE_DOC_ID`."
+
+**Reading from Specific Tabs:**
+
+- "Read the content from tab `TAB_ID` in document `YOUR_GOOGLE_DOC_ID` using the `readGoogleDoc` tool."
+- "Get the markdown content from tab `TAB_ID` in document `YOUR_GOOGLE_DOC_ID`."
+
+**Writing to Specific Tabs:**
+
+- "Append 'New content' to tab `TAB_ID` in document `YOUR_GOOGLE_DOC_ID`."
+- "Insert text at index 100 in tab `TAB_ID` of document `YOUR_GOOGLE_DOC_ID`."
+- "Delete content from range 50-100 in tab `TAB_ID` of document `YOUR_GOOGLE_DOC_ID`."
+
+**Note:** The following tools support the optional `tabId` parameter:
+
+- `readGoogleDoc` - Read from a specific tab
+- `appendToGoogleDoc` - Append to a specific tab
+- `insertText` - Insert text into a specific tab
+- `deleteRange` - Delete content from a specific tab
+
+When `tabId` is not specified, operations target the first tab (or the legacy document body for older documents without tabs).
+
 ### Advanced Usage Examples:
+
 - **Text Styling**: "Use `applyTextStyle` to make the text 'Important Section' bold and red (#FF0000) in document `YOUR_GOOGLE_DOC_ID`."
 - **Paragraph Styling**: "Use `applyParagraphStyle` to center-align the paragraph containing 'Title Here' in document `YOUR_GOOGLE_DOC_ID`."
 - **Table Creation**: "Insert a 3x4 table at index 500 in document `YOUR_GOOGLE_DOC_ID` using the `insertTable` tool."
@@ -235,6 +272,7 @@ This server provides two ways to insert images into Google Documents:
 Inserts an image directly from a publicly accessible URL. The image URL must be accessible without authentication.
 
 **Parameters:**
+
 - `documentId`: The Google Document ID
 - `imageUrl`: Publicly accessible URL (http:// or https://)
 - `index`: Position in the document (1-based indexing)
@@ -242,6 +280,7 @@ Inserts an image directly from a publicly accessible URL. The image URL must be 
 - `height` (optional): Image height in points
 
 **Example:**
+
 ```
 "Insert an image from https://example.com/logo.png at index 100 in document YOUR_DOC_ID"
 ```
@@ -249,11 +288,13 @@ Inserts an image directly from a publicly accessible URL. The image URL must be 
 ### 2. Upload Local Image (`insertLocalImage`)
 
 Uploads a local image file to Google Drive and inserts it into the document. This is a two-step process that:
+
 1. Uploads the image to Google Drive (by default to the same folder as the document)
 2. Makes the image publicly readable
 3. Inserts the image into the document using its Drive URL
 
 **Parameters:**
+
 - `documentId`: The Google Document ID
 - `localImagePath`: Absolute path to the local image file
 - `index`: Position in the document (1-based indexing)
@@ -264,6 +305,7 @@ Uploads a local image file to Google Drive and inserts it into the document. Thi
 **Supported formats:** .jpg, .jpeg, .png, .gif, .bmp, .webp, .svg
 
 **Example:**
+
 ```
 "Upload and insert the image at /Users/myname/Pictures/chart.png at index 200 in document YOUR_DOC_ID with width 400 and height 300"
 ```
@@ -279,6 +321,28 @@ Uploads a local image file to Google Drive and inserts it into the document. Thi
 
 ---
 
+## Testing
+
+The multi-tab support features have been thoroughly tested and verified:
+
+✅ **Tested Features:**
+
+- `listDocumentTabs` - Lists all tabs with IDs, titles, positions, and content summaries
+- `readGoogleDoc` with `tabId` - Reads specific tabs; backward compatible without `tabId`
+- `appendToGoogleDoc` with `tabId` - Appends to specific tabs without affecting others
+- `insertText` with `tabId` - Inserts text at specific positions in specific tabs
+- `deleteRange` with `tabId` - Deletes content from specific tabs in isolation
+- Multi-tab operations - Sequential operations on different tabs work independently
+- Error handling - Invalid tab IDs return clear, helpful error messages
+- Backward compatibility - Operations without `tabId` default to first tab (legacy documents supported)
+
+All tab-related features have been validated with real Google Docs containing multiple tabs, confirming:
+
+- Tab isolation (operations on one tab don't affect others)
+- Proper tab ID validation and error messages
+- Correct content retrieval and manipulation per tab
+- Full backward compatibility with single-tab and legacy documents
+
 ## Troubleshooting
 
 - **Claude shows "Failed" or "Could not attach":**
@@ -291,6 +355,10 @@ Uploads a local image file to Google Drive and inserts it into the document. Thi
   - Ensure you enabled the correct APIs (Docs, Drive).
   - Make sure you added your email as a Test User on the OAuth Consent Screen.
   - Verify the `credentials.json` file is correctly placed in the project root.
+- **Tab-related Errors:**
+  - If you get "Tab with ID not found", use `listDocumentTabs` to see all available tab IDs
+  - Ensure you're using the correct tab ID format (typically a short alphanumeric string)
+  - Single-tab documents don't require `tabId` - operations work on the document body automatically
 
 ---
 

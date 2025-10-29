@@ -439,26 +439,25 @@ execute: async (args, { log }) => {
       result += `${'─'.repeat(50)}\n\n`;
     }
 
-    allTabs.forEach((tabInfo: any, index: number) => {
-      const tab = tabInfo;
-      const level = tabInfo.level;
+    allTabs.forEach((tab: GDocsHelpers.TabWithLevel, index: number) => {
+      const level = tab.level;
+      const tabProperties = tab.tabProperties || {};
       const indent = '  '.repeat(level);
-      const tabProps = tab.tabProperties || {};
 
       // For single tab documents, show simplified info
       if (isSingleTab) {
         result += `**Default Tab:**\n`;
-        result += `- Tab ID: ${tabProps.tabId || 'Unknown'}\n`;
-        result += `- Title: ${tabProps.title || '(Untitled)'}\n`;
+        result += `- Tab ID: ${tabProperties.tabId || 'Unknown'}\n`;
+        result += `- Title: ${tabProperties.title || '(Untitled)'}\n`;
       } else {
         // For multi-tab documents, show hierarchy
         const prefix = level > 0 ? '└─ ' : '';
-        result += `${indent}${prefix}**Tab ${index + 1}:** "${tabProps.title || 'Untitled Tab'}"\n`;
-        result += `${indent}   - ID: ${tabProps.tabId || 'Unknown'}\n`;
-        result += `${indent}   - Index: ${tabProps.index !== undefined ? tabProps.index : 'N/A'}\n`;
+        result += `${indent}${prefix}**Tab ${index + 1}:** "${tabProperties.title || 'Untitled Tab'}"\n`;
+        result += `${indent}   - ID: ${tabProperties.tabId || 'Unknown'}\n`;
+        result += `${indent}   - Index: ${tabProperties.index !== undefined ? tabProperties.index : 'N/A'}\n`;
 
-        if (tabProps.parentTabId) {
-          result += `${indent}   - Parent Tab ID: ${tabProps.parentTabId}\n`;
+        if (tabProperties.parentTabId) {
+          result += `${indent}   - Parent Tab ID: ${tabProperties.parentTabId}\n`;
         }
       }
 
@@ -494,39 +493,66 @@ execute: async (args, { log }) => {
 
 server.addTool({
 name: 'appendToGoogleDoc',
-description: 'Appends text to the very end of a specific Google Document.',
+description: 'Appends text to the very end of a specific Google Document or tab.',
 parameters: DocumentIdParameter.extend({
 textToAppend: z.string().min(1).describe('The text to add to the end.'),
 addNewlineIfNeeded: z.boolean().optional().default(true).describe("Automatically add a newline before the appended text if the doc doesn't end with one."),
+tabId: z.string().optional().describe('The ID of the specific tab to append to. If not specified, appends to the first tab (or legacy document.body for documents without tabs).')
 }),
 execute: async (args, { log }) => {
 const docs = await getDocsClient();
-log.info(`Appending to Google Doc: ${args.documentId}`);
+log.info(`Appending to Google Doc: ${args.documentId}${args.tabId ? ` (tab: ${args.tabId})` : ''}`);
 
     try {
+        // Determine if we need tabs content
+        const needsTabsContent = !!args.tabId;
+
         // Get the current end index
-        const docInfo = await docs.documents.get({ documentId: args.documentId, fields: 'body(content(endIndex)),documentStyle(pageSize)' }); // Need content for endIndex
+        const docInfo = await docs.documents.get({
+            documentId: args.documentId,
+            includeTabsContent: needsTabsContent,
+            fields: needsTabsContent ? 'tabs' : 'body(content(endIndex)),documentStyle(pageSize)'
+        });
+
         let endIndex = 1;
-        let lastCharIsNewline = false;
-        if (docInfo.data.body?.content) {
-            const lastElement = docInfo.data.body.content[docInfo.data.body.content.length - 1];
-             if (lastElement?.endIndex) {
-                endIndex = lastElement.endIndex -1; // Insert *before* the final newline of the doc typically
-                // Crude check for last character (better check would involve reading last text run)
-                 // const lastTextRun = ... find last text run ...
-                 // if (lastTextRun?.content?.endsWith('\n')) lastCharIsNewline = true;
+        let bodyContent: any;
+
+        // If tabId is specified, find the specific tab
+        if (args.tabId) {
+            const targetTab = GDocsHelpers.findTabById(docInfo.data, args.tabId);
+            if (!targetTab) {
+                throw new UserError(`Tab with ID "${args.tabId}" not found in document.`);
+            }
+            if (!targetTab.documentTab) {
+                throw new UserError(`Tab "${args.tabId}" does not have content (may not be a document tab).`);
+            }
+            bodyContent = targetTab.documentTab.body?.content;
+        } else {
+            bodyContent = docInfo.data.body?.content;
+        }
+
+        if (bodyContent) {
+            const lastElement = bodyContent[bodyContent.length - 1];
+            if (lastElement?.endIndex) {
+                endIndex = lastElement.endIndex - 1; // Insert *before* the final newline of the doc typically
             }
         }
+
         // Simpler approach: Always assume insertion is needed unless explicitly told not to add newline
         const textToInsert = (args.addNewlineIfNeeded && endIndex > 1 ? '\n' : '') + args.textToAppend;
 
         if (!textToInsert) return "Nothing to append.";
 
-        const request: docs_v1.Schema$Request = { insertText: { location: { index: endIndex }, text: textToInsert } };
+        const location: any = { index: endIndex };
+        if (args.tabId) {
+            location.tabId = args.tabId;
+        }
+
+        const request: docs_v1.Schema$Request = { insertText: { location, text: textToInsert } };
         await GDocsHelpers.executeBatchUpdate(docs, args.documentId, [request]);
 
-        log.info(`Successfully appended to doc: ${args.documentId}`);
-        return `Successfully appended text to document ${args.documentId}.`;
+        log.info(`Successfully appended to doc: ${args.documentId}${args.tabId ? ` (tab: ${args.tabId})` : ''}`);
+        return `Successfully appended text to ${args.tabId ? `tab ${args.tabId} in ` : ''}document ${args.documentId}.`;
     } catch (error: any) {
          log.error(`Error appending to doc ${args.documentId}: ${error.message || error}`);
          if (error instanceof UserError) throw error;
@@ -539,17 +565,40 @@ log.info(`Appending to Google Doc: ${args.documentId}`);
 
 server.addTool({
 name: 'insertText',
-description: 'Inserts text at a specific index within the document body.',
+description: 'Inserts text at a specific index within the document body or a specific tab.',
 parameters: DocumentIdParameter.extend({
 textToInsert: z.string().min(1).describe('The text to insert.'),
 index: z.number().int().min(1).describe('The index (1-based) where the text should be inserted.'),
+tabId: z.string().optional().describe('The ID of the specific tab to insert into. If not specified, inserts into the first tab (or legacy document.body for documents without tabs).')
 }),
 execute: async (args, { log }) => {
 const docs = await getDocsClient();
-log.info(`Inserting text in doc ${args.documentId} at index ${args.index}`);
+log.info(`Inserting text in doc ${args.documentId} at index ${args.index}${args.tabId ? ` (tab: ${args.tabId})` : ''}`);
 try {
-await GDocsHelpers.insertText(docs, args.documentId, args.textToInsert, args.index);
-return `Successfully inserted text at index ${args.index}.`;
+    if (args.tabId) {
+        // For tab-specific inserts, we need to verify the tab exists first
+        const docInfo = await docs.documents.get({
+            documentId: args.documentId,
+            includeTabsContent: true,
+            fields: 'tabs(tabProperties,documentTab)'
+        });
+        const targetTab = GDocsHelpers.findTabById(docInfo.data, args.tabId);
+        if (!targetTab) {
+            throw new UserError(`Tab with ID "${args.tabId}" not found in document.`);
+        }
+        if (!targetTab.documentTab) {
+            throw new UserError(`Tab "${args.tabId}" does not have content (may not be a document tab).`);
+        }
+
+        // Insert with tabId
+        const location: any = { index: args.index, tabId: args.tabId };
+        const request: docs_v1.Schema$Request = { insertText: { location, text: args.textToInsert } };
+        await GDocsHelpers.executeBatchUpdate(docs, args.documentId, [request]);
+    } else {
+        // Use existing helper for backward compatibility
+        await GDocsHelpers.insertText(docs, args.documentId, args.textToInsert, args.index);
+    }
+    return `Successfully inserted text at index ${args.index}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
 } catch (error: any) {
 log.error(`Error inserting text in doc ${args.documentId}: ${error.message || error}`);
 if (error instanceof UserError) throw error;
@@ -560,32 +609,52 @@ throw new UserError(`Failed to insert text: ${error.message || 'Unknown error'}`
 
 server.addTool({
 name: 'deleteRange',
-description: 'Deletes content within a specified range (start index inclusive, end index exclusive).',
+description: 'Deletes content within a specified range (start index inclusive, end index exclusive) from the document or a specific tab.',
 parameters: DocumentIdParameter.extend({
   startIndex: z.number().int().min(1).describe('The starting index of the text range (inclusive, starts from 1).'),
-  endIndex: z.number().int().min(1).describe('The ending index of the text range (exclusive).')
+  endIndex: z.number().int().min(1).describe('The ending index of the text range (exclusive).'),
+  tabId: z.string().optional().describe('The ID of the specific tab to delete from. If not specified, deletes from the first tab (or legacy document.body for documents without tabs).')
 }).refine(data => data.endIndex > data.startIndex, {
   message: "endIndex must be greater than startIndex",
   path: ["endIndex"],
 }),
 execute: async (args, { log }) => {
 const docs = await getDocsClient();
-log.info(`Deleting range ${args.startIndex}-${args.endIndex} in doc ${args.documentId}`);
+log.info(`Deleting range ${args.startIndex}-${args.endIndex} in doc ${args.documentId}${args.tabId ? ` (tab: ${args.tabId})` : ''}`);
 if (args.endIndex <= args.startIndex) {
 throw new UserError("End index must be greater than start index for deletion.");
 }
 try {
-const request: docs_v1.Schema$Request = {
-                deleteContentRange: {
-                    range: { startIndex: args.startIndex, endIndex: args.endIndex }
-                }
-            };
-            await GDocsHelpers.executeBatchUpdate(docs, args.documentId, [request]);
-            return `Successfully deleted content in range ${args.startIndex}-${args.endIndex}.`;
-        } catch (error: any) {
-            log.error(`Error deleting range in doc ${args.documentId}: ${error.message || error}`);
-            if (error instanceof UserError) throw error;
-            throw new UserError(`Failed to delete range: ${error.message || 'Unknown error'}`);
+    // If tabId is specified, verify the tab exists
+    if (args.tabId) {
+        const docInfo = await docs.documents.get({
+            documentId: args.documentId,
+            includeTabsContent: true,
+            fields: 'tabs(tabProperties,documentTab)'
+        });
+        const targetTab = GDocsHelpers.findTabById(docInfo.data, args.tabId);
+        if (!targetTab) {
+            throw new UserError(`Tab with ID "${args.tabId}" not found in document.`);
+        }
+        if (!targetTab.documentTab) {
+            throw new UserError(`Tab "${args.tabId}" does not have content (may not be a document tab).`);
+        }
+    }
+
+    const range: any = { startIndex: args.startIndex, endIndex: args.endIndex };
+    if (args.tabId) {
+        range.tabId = args.tabId;
+    }
+
+    const request: docs_v1.Schema$Request = {
+        deleteContentRange: { range }
+    };
+    await GDocsHelpers.executeBatchUpdate(docs, args.documentId, [request]);
+    return `Successfully deleted content in range ${args.startIndex}-${args.endIndex}${args.tabId ? ` in tab ${args.tabId}` : ''}.`;
+} catch (error: any) {
+    log.error(`Error deleting range in doc ${args.documentId}: ${error.message || error}`);
+    if (error instanceof UserError) throw error;
+    throw new UserError(`Failed to delete range: ${error.message || 'Unknown error'}`);
 }
 }
 });

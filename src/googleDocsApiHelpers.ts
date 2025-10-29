@@ -601,12 +601,19 @@ export async function uploadImageToDrive(
 // --- Tab Management Helpers ---
 
 /**
+ * Interface for a tab with hierarchy level information
+ */
+export interface TabWithLevel extends docs_v1.Schema$Tab {
+    level: number;
+}
+
+/**
  * Recursively collect all tabs from a document in a flat list with hierarchy info
  * @param doc - The Google Doc document object
  * @returns Array of tabs with nesting level information
  */
-export function getAllTabs(doc: docs_v1.Schema$Document): any[] {
-    const allTabs: any[] = [];
+export function getAllTabs(doc: docs_v1.Schema$Document): TabWithLevel[] {
+    const allTabs: TabWithLevel[] = [];
     if (!doc.tabs || doc.tabs.length === 0) {
         return allTabs;
     }
@@ -623,7 +630,7 @@ export function getAllTabs(doc: docs_v1.Schema$Document): any[] {
  * @param allTabs - The accumulator array
  * @param level - Current nesting level (0 for top-level)
  */
-function addCurrentAndChildTabs(tab: any, allTabs: any[], level: number): void {
+function addCurrentAndChildTabs(tab: docs_v1.Schema$Tab, allTabs: TabWithLevel[], level: number): void {
     allTabs.push({ ...tab, level });
     if (tab.childTabs && tab.childTabs.length > 0) {
         for (const childTab of tab.childTabs) {
@@ -637,20 +644,38 @@ function addCurrentAndChildTabs(tab: any, allTabs: any[], level: number): void {
  * @param documentTab - The DocumentTab object
  * @returns Total character count
  */
-export function getTabTextLength(documentTab: any): number {
+export function getTabTextLength(documentTab: docs_v1.Schema$DocumentTab | undefined): number {
     let totalLength = 0;
 
-    if (documentTab?.body?.content) {
-        documentTab.body.content.forEach((element: any) => {
-            if (element.paragraph?.elements) {
-                element.paragraph.elements.forEach((pe: any) => {
-                    if (pe.textRun?.content) {
-                        totalLength += pe.textRun.content.length;
-                    }
-                });
-            }
-        });
+    if (!documentTab?.body?.content) {
+        return 0;
     }
+
+    documentTab.body.content.forEach((element: any) => {
+        // Handle paragraphs
+        if (element.paragraph?.elements) {
+            element.paragraph.elements.forEach((pe: any) => {
+                if (pe.textRun?.content) {
+                    totalLength += pe.textRun.content.length;
+                }
+            });
+        }
+
+        // Handle tables
+        if (element.table?.tableRows) {
+            element.table.tableRows.forEach((row: any) => {
+                row.tableCells?.forEach((cell: any) => {
+                    cell.content?.forEach((cellElement: any) => {
+                        cellElement.paragraph?.elements?.forEach((pe: any) => {
+                            if (pe.textRun?.content) {
+                                totalLength += pe.textRun.content.length;
+                            }
+                        });
+                    });
+                });
+            });
+        }
+    });
 
     return totalLength;
 }
@@ -661,13 +686,13 @@ export function getTabTextLength(documentTab: any): number {
  * @param tabId - The tab ID to search for
  * @returns The tab object if found, null otherwise
  */
-export function findTabById(doc: docs_v1.Schema$Document, tabId: string): any {
+export function findTabById(doc: docs_v1.Schema$Document, tabId: string): docs_v1.Schema$Tab | null {
     if (!doc.tabs || doc.tabs.length === 0) {
         return null;
     }
 
     // Helper function to search through tabs recursively
-    const searchTabs = (tabs: any[]): any => {
+    const searchTabs = (tabs: docs_v1.Schema$Tab[]): docs_v1.Schema$Tab | null => {
         for (const tab of tabs) {
             if (tab.tabProperties?.tabId === tabId) {
                 return tab;
