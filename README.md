@@ -1,5 +1,7 @@
 # Ultimate Google Docs, Sheets & Drive MCP Server
 
+***Multi-account support*** — seamlessly switch between work and personal Google accounts with a single server instance.
+
 ![Demo Animation](assets/google.docs.mcp.1.gif)
 
 Connect Claude Desktop (or other MCP clients) to your Google Docs, Google Sheets, and Google Drive!
