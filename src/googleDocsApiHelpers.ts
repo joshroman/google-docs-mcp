@@ -2,7 +2,7 @@
 import { google, docs_v1 } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { UserError } from 'fastmcp';
-import { TextStyleArgs, ParagraphStyleArgs, hexToRgbColor, NotImplementedError } from './types.js';
+import { TextStyleArgs, ParagraphStyleArgs, hexToRgbColor, NotImplementedError } from './types/tool-handler.js';
 
 type Docs = docs_v1.Docs; // Alias for convenience
 

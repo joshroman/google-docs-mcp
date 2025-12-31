@@ -1,5 +1,5 @@
 // tests/types.test.js
-import { hexToRgbColor, validateHexColor } from '../dist/types.js';
+import { hexToRgbColor, validateHexColor } from '../dist/types/tool-handler.js';
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
 

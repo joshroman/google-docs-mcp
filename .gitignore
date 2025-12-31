@@ -20,3 +20,11 @@ tokens/
 
 # macOS
 .DS_Store
+
+# Repomix
+.repomix/
+repomix-output.*
+
+# Video files
+*.mp4
+*.mov

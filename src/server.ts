@@ -9,22 +9,24 @@ import { fileURLToPath } from 'url';
 
 // Import types and helpers
 import {
-DocumentIdParameter,
-RangeParameters,
-OptionalRangeParameters,
-TextFindParameter,
-TextStyleParameters,
-TextStyleArgs,
-ParagraphStyleParameters,
-ParagraphStyleArgs,
-ApplyTextStyleToolParameters, ApplyTextStyleToolArgs,
-ApplyParagraphStyleToolParameters, ApplyParagraphStyleToolArgs,
-NotImplementedError
-} from './types.js';
+  UserIdParameter,
+  DocumentIdParameter,
+  RangeParameters,
+  OptionalRangeParameters,
+  TextFindParameter,
+  TextStyleParameters,
+  TextStyleArgs,
+  ParagraphStyleParameters,
+  ParagraphStyleArgs,
+  ApplyTextStyleToolParameters,
+  ApplyTextStyleToolArgs,
+  ApplyParagraphStyleToolParameters,
+  ApplyParagraphStyleToolArgs,
+  NotImplementedError
+} from './types/tool-handler.js';
 import * as GDocsHelpers from './googleDocsApiHelpers.js';
 import * as SheetsHelpers from './googleSheetsApiHelpers.js';
 import { GAuthService } from './services/gauth.js';
-import { UserIdParameter } from './types/tool-handler.js';
 
 // Get the directory of this script
 const __filename = fileURLToPath(import.meta.url);
@@ -90,8 +92,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const server = new FastMCP({
-  name: 'Ultimate Google Docs & Sheets MCP Server',
-  version: '1.0.0'
+  name: 'Google Docs & Sheets MCP Server',
+  version: '2.0.0'
 });
 
 // --- Helper to get Docs client within tools ---
@@ -2492,7 +2494,7 @@ execute: async (args, { log }) => {
 async function startServer() {
 try {
 await initializeGAuthService(); // Initialize multi-account auth
-console.error("Starting Ultimate Google Docs & Sheets MCP server...");
+console.error("Starting Google Docs & Sheets MCP server...");
 
       // Using stdio as before
       const configToUse = {

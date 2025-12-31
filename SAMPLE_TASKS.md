@@ -1,6 +1,19 @@
-# 15 Powerful Tasks with the Ultimate Google Docs & Drive MCP Server
+# Example Tasks for the Google Docs & Drive MCP Server
 
-This document showcases practical examples of what you can accomplish with the enhanced Google Docs & Drive MCP Server. These examples demonstrate how AI assistants like Claude can perform sophisticated document formatting, structuring, and file management tasks through the MCP interface.
+This document shows practical examples of what you can do with the Google Docs & Drive MCP Server.
+
+## Multi-Account Support
+
+All tools require a `user_id` parameter to specify which Google account to use:
+
+```
+"Read document ABC123 using user josh@omaihq.com"
+"List my Google Docs using user joshroman@gmail.com"
+```
+
+Use `list_accounts` to see available accounts.
+
+---
 
 ## Document Formatting & Structure Tasks
 
@@ -150,7 +163,7 @@ Steps:
 6. Apply consistent spacing between sections
 ```
 
-These examples demonstrate the power and flexibility of the enhanced Google Docs & Drive MCP Server, showcasing how AI assistants can help with sophisticated document formatting, structuring, and comprehensive file management tasks.
+---
 
 ## Google Drive Management Tasks
 

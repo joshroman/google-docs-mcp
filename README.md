@@ -1,16 +1,15 @@
-# Ultimate Google Docs, Sheets & Drive MCP Server
+# Google Docs, Sheets & Drive MCP Server
 
-***Multi-account support*** — seamlessly switch between work and personal Google accounts with a single server instance.
+**Multi-account support** — switch between work and personal Google accounts with a single server instance.
 
 ![Demo Animation](assets/google.docs.mcp.1.gif)
 
 Connect Claude Desktop (or other MCP clients) to your Google Docs, Google Sheets, and Google Drive!
 
-> 🔥 **Check out [15 powerful tasks](SAMPLE_TASKS.md) you can accomplish with this enhanced server!**
-> 📁 **NEW:** Complete Google Drive file management capabilities!
-> 📊 **NEW:** Full Google Sheets support for reading, writing, and managing spreadsheets!
+> See [example tasks](SAMPLE_TASKS.md) for practical usage examples.
+> Includes Google Drive file management and Google Sheets support.
 
-This comprehensive server uses the Model Context Protocol (MCP) and the `fastmcp` library to provide tools for reading, writing, formatting, structuring Google Documents and Spreadsheets, and managing your entire Google Drive. It acts as a powerful bridge, allowing AI assistants like Claude to interact with your documents, spreadsheets, and files programmatically with advanced capabilities.
+This MCP server provides tools for reading, writing, formatting, and managing Google Documents, Spreadsheets, and Drive files. It allows AI assistants like Claude to interact with your Google Workspace programmatically.
 
 **Features:**
 
