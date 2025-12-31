@@ -1,16 +1,20 @@
 {
-  "name": "mcp-googledocs-server",
-  "version": "1.0.0",
+  "name": "google-docs-mcp",
+  "version": "2.0.0",
   "type": "module",
   "main": "index.js",
+  "description": "MCP server for Google Docs, Sheets, and Drive with multi-account support",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joshroman/google-docs-mcp.git"
+  },
   "scripts": {
     "test": "node --test tests/",
     "build": "tsc"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["mcp", "google-docs", "google-sheets", "google-drive", "multi-account"],
+  "author": "Josh Roman",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "fastmcp": "^3.24.0",
     "google-auth-library": "^9.15.1",

@@ -1,0 +1,15 @@
+{
+  "accounts": [
+    {
+      "email": "user1@domain1.com",
+      "account_type": "work",
+      "extra_info": "Primary workspace account",
+      "gauth_file": "/path/to/gcp-oauth.keys.json"
+    },
+    {
+      "email": "user2@domain2.com",
+      "account_type": "personal",
+      "extra_info": "Personal account"
+    }
+  ]
+}

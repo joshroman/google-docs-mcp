@@ -2,12 +2,21 @@
 node_modules/
 dist/
 
-# Credentials / Tokens
+# Credentials / Tokens (single-account legacy)
 credentials.json
 token.json
+
+# Multi-account credentials
+.accounts.json
+.gauth.json
+.oauth2.*.json
+tokens/
 
 # Log files
 *.log
 
-# Environment variables (if you use a .env file later)
-.env* 
+# Environment variables
+.env*
+
+# macOS
+.DS_Store

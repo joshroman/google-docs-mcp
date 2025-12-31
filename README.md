@@ -63,9 +63,57 @@ This comprehensive server uses the Model Context Protocol (MCP) and the `fastmcp
 
 ### Integration
 
+- **Multi-Account Support:** Switch between multiple Google accounts (work, personal, etc.) with a single server instance
 - **Google Authentication:** Secure OAuth 2.0 authentication with full Drive, Docs, and Sheets access
 - **MCP Compliant:** Designed for use with Claude and other MCP clients
 - **VS Code Integration:** [Setup guide](vscode.md) for VS Code MCP extension
+
+---
+
+## Multi-Account Support
+
+This fork adds support for multiple Google accounts, allowing you to seamlessly switch between work and personal accounts without reconfiguring the server.
+
+### How it Works
+
+1. **Configure accounts** in `.accounts.json` with email addresses and OAuth credentials
+2. **Use `list_accounts`** to see available accounts
+3. **Pass `user_id`** (email address) to any tool to operate on that account
+
+### Quick Example
+
+```
+"List my available Google accounts using list_accounts"
+→ Returns: josh@omaihq.com (work), joshroman@gmail.com (personal)
+
+"Read Google Doc ABC123 using user josh@omaihq.com"
+→ Uses the OMAI work account to access the document
+```
+
+### Account Configuration
+
+Create `.accounts.json` in the project root:
+
+```json
+{
+  "accounts": [
+    {
+      "email": "user@work.com",
+      "account_type": "work",
+      "extra_info": "Work account",
+      "gauth_file": "/path/to/work-oauth-credentials.json"
+    },
+    {
+      "email": "user@gmail.com",
+      "account_type": "personal",
+      "extra_info": "Personal account",
+      "gauth_file": "/path/to/personal-oauth-credentials.json"
+    }
+  ]
+}
+```
+
+**Note:** The `user_id` parameter is required for all tools except `list_accounts`. See [example.accounts.json](example.accounts.json) for a template.
 
 ---
 
@@ -207,7 +255,8 @@ If you want to use this server with Claude Desktop, you need to tell Claude how 
         "google-docs-mcp": {
           "command": "node",
           "args": [
-            "/PATH/TO/YOUR/CLONED/REPO/mcp-googledocs-server/dist/server.js"
+            "/PATH/TO/YOUR/CLONED/REPO/mcp-googledocs-server/dist/server.js",
+            "--accounts-file", "/PATH/TO/YOUR/CLONED/REPO/mcp-googledocs-server/.accounts.json"
           ],
           "env": {}
         }
@@ -216,6 +265,12 @@ If you want to use this server with Claude Desktop, you need to tell Claude how 
       // Other Claude settings might be here
     }
     ```
+
+    **Multi-Account Configuration:**
+
+    The server accepts these optional arguments:
+    - `--accounts-file`: Path to your `.accounts.json` file (default: `.accounts.json` in project root)
+    - `--credentials-dir`: Directory where OAuth tokens are stored (default: project root)
 
     - **Make sure the path in `"args"` is correct and absolute!**
     - If the file already existed, carefully merge this entry into the existing `mcpServers` object. Ensure the JSON is valid (check commas!).
@@ -227,11 +282,16 @@ If you want to use this server with Claude Desktop, you need to tell Claude how 
 
 ## Usage with Claude Desktop
 
-Once configured, you should be able to use the tools in your chats with Claude:
+Once configured, you should be able to use the tools in your chats with Claude.
 
-- "Use the `google-docs-mcp` server to read the document with ID `YOUR_GOOGLE_DOC_ID`."
-- "Can you get the content of Google Doc `YOUR_GOOGLE_DOC_ID`?"
-- "Append 'This was added by Claude!' to document `YOUR_GOOGLE_DOC_ID` using the `google-docs-mcp` tool."
+**First, check available accounts:**
+- "List my Google accounts using `list_accounts`"
+
+**Then use any tool with the `user_id` parameter:**
+- "Read the document with ID `YOUR_GOOGLE_DOC_ID` using user `your@email.com`"
+- "Append 'This was added by Claude!' to document `YOUR_GOOGLE_DOC_ID` using user `your@email.com`"
+
+**Note:** The `user_id` parameter (an email address) is required for all tools except `list_accounts`.
 
 ### Working with Tabs
 
@@ -343,8 +403,13 @@ Uploads a local image file to Google Drive and inserts it into the document. Thi
 
 ## Security & Token Storage
 
-- **`.gitignore`:** This repository includes a `.gitignore` file which should prevent you from accidentally committing your sensitive `credentials.json` and `token.json` files. **Do not remove these lines from `.gitignore`**.
-- **Token Storage:** This server stores the Google authorization token (`token.json`) directly in the project folder for simplicity during setup. In production or more security-sensitive environments, consider storing this token more securely, such as using system keychains, encrypted files, or dedicated secret management services.
+- **`.gitignore`:** This repository includes a `.gitignore` file which should prevent you from accidentally committing sensitive files:
+  - `.accounts.json` - Your account configuration
+  - `.oauth2.*.json` - Per-account OAuth tokens
+  - `credentials.json`, `token.json` - Legacy single-account files
+  - **Do not remove these lines from `.gitignore`**.
+- **Token Storage:** This server stores OAuth tokens per-account as `.oauth2.{email}.json` files in the project folder (or specified `--credentials-dir`). In production environments, consider storing tokens more securely using system keychains or secret management services.
+- **OAuth Credentials:** Each account can use a separate OAuth credential file (`gauth_file`), which is useful when using different Google Cloud projects for work vs. personal accounts.
 
 ---
 
